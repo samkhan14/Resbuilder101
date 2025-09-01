@@ -245,4 +245,53 @@ class ResumeController extends Controller
 
         return response()->json(['error' => 'Invalid format'], 400);
     }
+
+    public function sync(Request $request, Resume $resume)
+    {
+        // Check if user owns this resume
+        if ($resume->user_id !== $request->user()->id) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $request->validate([
+            'platform' => 'required|string|in:linkedin,naukri,gulftalent,indeed'
+        ]);
+
+        $platform = $request->platform;
+
+        try {
+            // Simulate sync process (this will be replaced with actual n8n webhook)
+            $syncResults = [
+                'linkedin' => ['status' => 'success', 'message' => 'Resume synced to LinkedIn successfully'],
+                'naukri' => ['status' => 'success', 'message' => 'Resume synced to Naukri.com successfully'],
+                'gulftalent' => ['status' => 'success', 'message' => 'Resume synced to GulfTalent successfully'],
+                'indeed' => ['status' => 'success', 'message' => 'Resume synced to Indeed successfully']
+            ];
+
+            $result = $syncResults[$platform] ?? ['status' => 'error', 'message' => 'Platform not supported'];
+
+            // Update resume sync status
+            $resume->update([
+                'last_synced_at' => now(),
+                'sync_status' => [
+                    'last_sync' => now()->toISOString(),
+                    'platform' => $platform,
+                    'status' => $result['status']
+                ]
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => $result['message'],
+                'platform' => $platform,
+                'resume_id' => $resume->id
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to sync resume: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

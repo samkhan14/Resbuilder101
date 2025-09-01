@@ -51,6 +51,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('/{resume}', [ResumeController::class, 'destroy'])->name('destroy');
         Route::post('/{resume}/duplicate', [ResumeController::class, 'duplicate'])->name('duplicate');
         Route::post('/{resume}/download', [ResumeController::class, 'download'])->name('download');
+        Route::post('/{resume}/sync', [ResumeController::class, 'sync'])->name('sync');
     });
 
     // Template selection
@@ -60,8 +61,9 @@ Route::middleware('auth')->group(function () {
     // Admin routes
     Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/', [AdminController::class, 'index'])->name('dashboard');
-        Route::resource('categories', AdminController::class);
-        Route::resource('templates', AdminController::class);
+        Route::get('/templates', [AdminController::class, 'templates'])->name('templates');
+        Route::get('/categories', [AdminController::class, 'categories'])->name('categories');
+        Route::get('/users', [AdminController::class, 'users'])->name('users');
     });
 });
 

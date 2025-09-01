@@ -791,26 +791,40 @@ const saveDraft = async () => {
     saving.value = true
     form.status = 'draft'
 
-    if (isEditing.value) {
-        await form.put(route('resumes.update', props.resume.id))
-    } else {
-        await form.post(route('resumes.store'))
-    }
+    try {
+        if (isEditing.value) {
+            await form.put(route('resumes.update', props.resume.id))
+        } else {
+            await form.post(route('resumes.store'))
+        }
 
-    saving.value = false
+        // Redirect to Resume History after successful save
+        router.visit(route('resumes.index'))
+    } catch (error) {
+        console.error('Save failed:', error)
+    } finally {
+        saving.value = false
+    }
 }
 
 const publishResume = async () => {
     saving.value = true
     form.status = 'published'
 
-    if (isEditing.value) {
-        await form.put(route('resumes.update', props.resume.id))
-    } else {
-        await form.post(route('resumes.store'))
-    }
+    try {
+        if (isEditing.value) {
+            await form.put(route('resumes.update', props.resume.id))
+        } else {
+            await form.post(route('resumes.store'))
+        }
 
-    saving.value = false
+        // Redirect to Resume History after successful publish
+        router.visit(route('resumes.index'))
+    } catch (error) {
+        console.error('Publish failed:', error)
+    } finally {
+        saving.value = false
+    }
 }
 
 const downloadPDF = async () => {
