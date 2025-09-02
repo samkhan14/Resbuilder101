@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'n8n' => [
+        'webhook_url' => env('N8N_WEBHOOK_URL', 'http://localhost:5678/webhook/resume-sync'),
+        'api_key' => env('N8N_API_KEY'),
+        'timeout' => env('N8N_TIMEOUT', 30),
+    ],
+
 ];

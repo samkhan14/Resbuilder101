@@ -1,0 +1,544 @@
+{
+    "name": "LinkedIn Resume Sync Automation",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "resume-sync",
+                "responseMode": "responseNode",
+                "options": {}
+            },
+            "id": "webhook-trigger",
+            "name": "Webhook Trigger",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [240, 300],
+            "webhookId": "resume-sync"
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "string": [
+                        {
+                            "value1": "={{ $json.platform }}",
+                            "operation": "equal",
+                            "value2": "linkedin"
+                        }
+                    ]
+                }
+            },
+            "id": "linkedin-filter",
+            "name": "LinkedIn Filter",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
+            "position": [460, 300]
+        },
+        {
+            "parameters": {
+                "jsCode": "// Extract data from webhook payload\nconst payload = $input.first().json;\n\n// Prepare data for LinkedIn automation\nconst linkedinData = {\n  syncLogId: payload.sync_log_id,\n  platform: payload.platform,\n  resumeData: payload.resume_data,\n  userInfo: payload.user_info,\n  credentials: payload.credentials,\n  timestamp: payload.timestamp\n};\n\n// Extract resume information\nconst resume = payload.resume_data;\nconst personalInfo = resume.content_data.personal_info;\n\n// Prepare LinkedIn profile data\nconst linkedinProfileData = {\n  firstName: personalInfo.first_name,\n  lastName: personalInfo.last_name,\n  headline: personalInfo.title || '',\n  summary: resume.summary || '',\n  location: personalInfo.location || '',\n  email: personalInfo.email || '',\n  phone: personalInfo.phone || '',\n  website: personalInfo.website || '',\n  experience: resume.content_data.experience || [],\n  education: resume.content_data.education || [],\n  skills: resume.content_data.skills || [],\n  pdfUrl: resume.pdf_url || null\n};\n\nreturn {\n  json: {\n    ...linkedinData,\n    profileData: linkedinProfileData,\n    automationStarted: new Date().toISOString()\n  }\n};"
+            },
+            "id": "prepare-data",
+            "name": "Prepare LinkedIn Data",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [680, 300]
+        },
+        {
+            "parameters": {
+                "url": "https://www.linkedin.com/login",
+                "options": {
+                    "waitUntil": "networkidle"
+                }
+            },
+            "id": "navigate-login",
+            "name": "Navigate to LinkedIn Login",
+            "type": "n8n-nodes-base.puppeteer",
+            "typeVersion": 1,
+            "position": [900, 300]
+        },
+        {
+            "parameters": {
+                "selector": "#username",
+                "value": "={{ $json.credentials.platform_user_id }}"
+            },
+            "id": "fill-username",
+            "name": "Fill Username",
+            "type": "n8n-nodes-base.puppeteer",
+            "typeVersion": 1,
+            "position": [1120, 200]
+        },
+        {
+            "parameters": {
+                "selector": "#password",
+                "value": "={{ $json.credentials.password }}"
+            },
+            "id": "fill-password",
+            "name": "Fill Password",
+            "type": "n8n-nodes-base.puppeteer",
+            "typeVersion": 1,
+            "position": [1120, 300]
+        },
+        {
+            "parameters": {
+                "selector": "button[type='submit']"
+            },
+            "id": "click-login",
+            "name": "Click Login",
+            "type": "n8n-nodes-base.puppeteer",
+            "typeVersion": 1,
+            "position": [1120, 400]
+        },
+        {
+            "parameters": {
+                "url": "https://www.linkedin.com/in/me/",
+                "options": {
+                    "waitUntil": "networkidle"
+                }
+            },
+            "id": "navigate-profile",
+            "name": "Navigate to Profile",
+            "type": "n8n-nodes-base.puppeteer",
+            "typeVersion": 1,
+            "position": [1340, 300]
+        },
+        {
+            "parameters": {
+                "selector": "button[aria-label*='Edit']"
+            },
+            "id": "click-edit",
+            "name": "Click Edit Profile",
+            "type": "n8n-nodes-base.puppeteer",
+            "typeVersion": 1,
+            "position": [1560, 300]
+        },
+        {
+            "parameters": {
+                "jsCode": "// Update LinkedIn profile fields\nconst profileData = $input.first().json.profileData;\n\n// Update headline\nif (profileData.headline) {\n  await page.evaluate((headline) => {\n    const headlineField = document.querySelector('input[name=\"headline\"]');\n    if (headlineField) {\n      headlineField.value = headline;\n      headlineField.dispatchEvent(new Event('input', { bubbles: true }));\n    }\n  }, profileData.headline);\n}\n\n// Update summary\nif (profileData.summary) {\n  await page.evaluate((summary) => {\n    const summaryField = document.querySelector('textarea[name=\"summary\"]');\n    if (summaryField) {\n      summaryField.value = summary;\n      summaryField.dispatchEvent(new Event('input', { bubbles: true }));\n    }\n  }, profileData.summary);\n}\n\n// Update location\nif (profileData.location) {\n  await page.evaluate((location) => {\n    const locationField = document.querySelector('input[name=\"location\"]');\n    if (locationField) {\n      locationField.value = location;\n      locationField.dispatchEvent(new Event('input', { bubbles: true }));\n    }\n  }, profileData.location);\n}\n\n// Update website\nif (profileData.website) {\n  await page.evaluate((website) => {\n    const websiteField = document.querySelector('input[name=\"website\"]');\n    if (websiteField) {\n      websiteField.value = website;\n      websiteField.dispatchEvent(new Event('input', { bubbles: true }));\n    }\n  }, profileData.website);\n}\n\n// Wait for changes to be processed\nawait page.waitForTimeout(2000);\n\nreturn {\n  json: {\n    ...$input.first().json,\n    profileUpdated: true,\n    timestamp: new Date().toISOString()\n  }\n};"
+            },
+            "id": "update-profile",
+            "name": "Update Profile Fields",
+            "type": "n8n-nodes-base.puppeteer",
+            "typeVersion": 1,
+            "position": [1780, 300]
+        },
+        {
+            "parameters": {
+                "selector": "button[type='submit']"
+            },
+            "id": "save-profile",
+            "name": "Save Profile",
+            "type": "n8n-nodes-base.puppeteer",
+            "typeVersion": 1,
+            "position": [2000, 300]
+        },
+        {
+            "parameters": {
+                "url": "https://www.linkedin.com/in/me/edit/forms/experience/",
+                "options": {
+                    "waitUntil": "networkidle"
+                }
+            },
+            "id": "navigate-experience",
+            "name": "Navigate to Experience",
+            "type": "n8n-nodes-base.puppeteer",
+            "typeVersion": 1,
+            "position": [2220, 300]
+        },
+        {
+            "parameters": {
+                "jsCode": "// Update LinkedIn experience section\nconst profileData = $input.first().json.profileData;\nconst experiences = profileData.experience || [];\n\n// Clear existing experience entries (optional - be careful with this)\n// await page.evaluate(() => {\n//   const deleteButtons = document.querySelectorAll('button[aria-label*=\"Delete\"]');\n//   deleteButtons.forEach(btn => btn.click());\n// });\n\n// Add new experience entries\nfor (let i = 0; i < experiences.length; i++) {\n  const exp = experiences[i];\n  \n  // Click \"Add experience\" button\n  await page.evaluate(() => {\n    const addButton = document.querySelector('button[aria-label*=\"Add experience\"]');\n    if (addButton) addButton.click();\n  });\n  \n  await page.waitForTimeout(1000);\n  \n  // Fill experience form\n  await page.evaluate((experience) => {\n    // Job title\n    const titleField = document.querySelector('input[name=\"title\"]');\n    if (titleField) {\n      titleField.value = experience.job_title || '';\n      titleField.dispatchEvent(new Event('input', { bubbles: true }));\n    }\n    \n    // Company\n    const companyField = document.querySelector('input[name=\"company\"]');\n    if (companyField) {\n      companyField.value = experience.company || '';\n      companyField.dispatchEvent(new Event('input', { bubbles: true }));\n    }\n    \n    // Description\n    const descField = document.querySelector('textarea[name=\"description\"]');\n    if (descField) {\n      descField.value = experience.description || '';\n      descField.dispatchEvent(new Event('input', { bubbles: true }));\n    }\n    \n    // Start date\n    if (experience.start_date) {\n      const startDateField = document.querySelector('input[name=\"start_date\"]');\n      if (startDateField) {\n        startDateField.value = experience.start_date;\n        startDateField.dispatchEvent(new Event('input', { bubbles: true }));\n      }\n    }\n    \n    // End date\n    if (experience.end_date) {\n      const endDateField = document.querySelector('input[name=\"end_date\"]');\n      if (endDateField) {\n        endDateField.value = experience.end_date;\n        endDateField.dispatchEvent(new Event('input', { bubbles: true }));\n      }\n    }\n  }, exp);\n  \n  await page.waitForTimeout(1000);\n  \n  // Save experience entry\n  await page.evaluate(() => {\n    const saveButton = document.querySelector('button[type=\"submit\"]');\n    if (saveButton) saveButton.click();\n  });\n  \n  await page.waitForTimeout(2000);\n}\n\nreturn {\n  json: {\n    ...$input.first().json,\n    experienceUpdated: true,\n    experiencesCount: experiences.length,\n    timestamp: new Date().toISOString()\n  }\n};"
+            },
+            "id": "update-experience",
+            "name": "Update Experience",
+            "type": "n8n-nodes-base.puppeteer",
+            "typeVersion": 1,
+            "position": [2440, 300]
+        },
+        {
+            "parameters": {
+                "url": "https://www.linkedin.com/in/me/edit/forms/skills/",
+                "options": {
+                    "waitUntil": "networkidle"
+                }
+            },
+            "id": "navigate-skills",
+            "name": "Navigate to Skills",
+            "type": "n8n-nodes-base.puppeteer",
+            "typeVersion": 1,
+            "position": [2660, 300]
+        },
+        {
+            "parameters": {
+                "jsCode": "// Update LinkedIn skills section\nconst profileData = $input.first().json.profileData;\nconst skills = profileData.skills || [];\n\n// Add skills one by one\nfor (let i = 0; i < skills.length; i++) {\n  const skill = skills[i];\n  \n  // Click \"Add skill\" button\n  await page.evaluate(() => {\n    const addButton = document.querySelector('button[aria-label*=\"Add skill\"]');\n    if (addButton) addButton.click();\n  });\n  \n  await page.waitForTimeout(1000);\n  \n  // Fill skill name\n  await page.evaluate((skillName) => {\n    const skillField = document.querySelector('input[name=\"skill\"]');\n    if (skillField) {\n      skillField.value = skillName;\n      skillField.dispatchEvent(new Event('input', { bubbles: true }));\n    }\n  }, skill);\n  \n  await page.waitForTimeout(1000);\n  \n  // Save skill\n  await page.evaluate(() => {\n    const saveButton = document.querySelector('button[type=\"submit\"]');\n    if (saveButton) saveButton.click();\n  });\n  \n  await page.waitForTimeout(2000);\n}\n\nreturn {\n  json: {\n    ...$input.first().json,\n    skillsUpdated: true,\n    skillsCount: skills.length,\n    timestamp: new Date().toISOString()\n  }\n};"
+            },
+            "id": "update-skills",
+            "name": "Update Skills",
+            "type": "n8n-nodes-base.puppeteer",
+            "typeVersion": 1,
+            "position": [2880, 300]
+        },
+        {
+            "parameters": {
+                "url": "https://www.linkedin.com/in/me/edit/forms/resume/",
+                "options": {
+                    "waitUntil": "networkidle"
+                }
+            },
+            "id": "navigate-resume",
+            "name": "Navigate to Resume Upload",
+            "type": "n8n-nodes-base.puppeteer",
+            "typeVersion": 1,
+            "position": [3100, 300]
+        },
+        {
+            "parameters": {
+                "jsCode": "// Upload resume PDF to LinkedIn\nconst profileData = $input.first().json.profileData;\nconst pdfUrl = profileData.pdfUrl;\n\nif (pdfUrl) {\n  try {\n    // Download PDF from URL\n    const response = await fetch(pdfUrl);\n    const pdfBuffer = await response.arrayBuffer();\n    \n    // Find file input element\n    const fileInput = await page.$('input[type=\"file\"][accept*=\"pdf\"]');\n    \n    if (fileInput) {\n      // Upload file\n      await fileInput.uploadFile({\n        name: 'resume.pdf',\n        type: 'application/pdf',\n        data: Buffer.from(pdfBuffer)\n      });\n      \n      await page.waitForTimeout(2000);\n      \n      // Click save/upload button\n      await page.evaluate(() => {\n        const uploadButton = document.querySelector('button[type=\"submit\"]');\n        if (uploadButton) uploadButton.click();\n      });\n      \n      await page.waitForTimeout(3000);\n    }\n  } catch (error) {\n    console.log('Resume upload failed:', error.message);\n  }\n}\n\nreturn {\n  json: {\n    ...$input.first().json,\n    resumeUploaded: !!pdfUrl,\n    timestamp: new Date().toISOString()\n  }\n};"
+            },
+            "id": "upload-resume",
+            "name": "Upload Resume PDF",
+            "type": "n8n-nodes-base.puppeteer",
+            "typeVersion": 1,
+            "position": [3320, 300]
+        },
+        {
+            "parameters": {
+                "jsCode": "// Finalize LinkedIn sync and prepare response\nconst inputData = $input.first().json;\nconst startTime = new Date(inputData.automationStarted);\nconst endTime = new Date();\nconst executionTime = Math.round((endTime - startTime) / 1000);\n\n// Prepare success response\nconst response = {\n  sync_log_id: inputData.syncLogId,\n  status: 'success',\n  platform: 'linkedin',\n  execution_time: executionTime,\n  response_data: {\n    profile_updated: inputData.profileUpdated || false,\n    experience_updated: inputData.experienceUpdated || false,\n    experiences_count: inputData.experiencesCount || 0,\n    skills_updated: inputData.skillsUpdated || false,\n    skills_count: inputData.skillsCount || 0,\n    resume_uploaded: inputData.resumeUploaded || false,\n    completed_at: endTime.toISOString()\n  },\n  bot_logs: [\n    {\n      timestamp: new Date().toISOString(),\n      action: 'linkedin_sync_completed',\n      message: 'LinkedIn profile successfully updated with resume data',\n      details: {\n        profile_updated: inputData.profileUpdated,\n        experience_updated: inputData.experienceUpdated,\n        skills_updated: inputData.skillsUpdated,\n        resume_uploaded: inputData.resumeUploaded\n      }\n    }\n  ]\n};\n\nreturn {\n  json: response\n};"
+            },
+            "id": "prepare-success-response",
+            "name": "Prepare Success Response",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [3540, 300]
+        },
+        {
+            "parameters": {
+                "url": "={{ $json.webhook_url }}",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "sync_log_id",
+                            "value": "={{ $json.sync_log_id }}"
+                        },
+                        {
+                            "name": "status",
+                            "value": "={{ $json.status }}"
+                        },
+                        {
+                            "name": "platform",
+                            "value": "={{ $json.platform }}"
+                        },
+                        {
+                            "name": "execution_time",
+                            "value": "={{ $json.execution_time }}"
+                        },
+                        {
+                            "name": "response_data",
+                            "value": "={{ $json.response_data }}"
+                        },
+                        {
+                            "name": "bot_logs",
+                            "value": "={{ $json.bot_logs }}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "send-success-response",
+            "name": "Send Success Response",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.1,
+            "position": [3760, 300]
+        },
+        {
+            "parameters": {
+                "jsCode": "// Handle errors and prepare error response\nconst error = $input.first().json.error || 'Unknown error occurred';\nconst inputData = $input.first().json;\nconst startTime = new Date(inputData.automationStarted || new Date());\nconst endTime = new Date();\nconst executionTime = Math.round((endTime - startTime) / 1000);\n\n// Prepare error response\nconst response = {\n  sync_log_id: inputData.syncLogId || null,\n  status: 'failed',\n  platform: 'linkedin',\n  execution_time: executionTime,\n  error_message: error,\n  response_data: {\n    error: error,\n    failed_at: endTime.toISOString()\n  },\n  bot_logs: [\n    {\n      timestamp: new Date().toISOString(),\n      action: 'linkedin_sync_failed',\n      message: `LinkedIn sync failed: ${error}`,\n      error: error\n    }\n  ]\n};\n\nreturn {\n  json: response\n};"
+            },
+            "id": "prepare-error-response",
+            "name": "Prepare Error Response",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [3540, 500]
+        },
+        {
+            "parameters": {
+                "url": "={{ $json.webhook_url }}",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "sync_log_id",
+                            "value": "={{ $json.sync_log_id }}"
+                        },
+                        {
+                            "name": "status",
+                            "value": "={{ $json.status }}"
+                        },
+                        {
+                            "name": "platform",
+                            "value": "={{ $json.platform }}"
+                        },
+                        {
+                            "name": "execution_time",
+                            "value": "={{ $json.execution_time }}"
+                        },
+                        {
+                            "name": "error_message",
+                            "value": "={{ $json.error_message }}"
+                        },
+                        {
+                            "name": "response_data",
+                            "value": "={{ $json.response_data }}"
+                        },
+                        {
+                            "name": "bot_logs",
+                            "value": "={{ $json.bot_logs }}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "send-error-response",
+            "name": "Send Error Response",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.1,
+            "position": [3760, 500]
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={{ { \"success\": true, \"message\": \"LinkedIn sync completed successfully\" } }}"
+            },
+            "id": "webhook-response",
+            "name": "Webhook Response",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1,
+            "position": [3980, 300]
+        }
+    ],
+    "connections": {
+        "Webhook Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "LinkedIn Filter",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "LinkedIn Filter": {
+            "main": [
+                [
+                    {
+                        "node": "Prepare LinkedIn Data",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Prepare LinkedIn Data": {
+            "main": [
+                [
+                    {
+                        "node": "Navigate to LinkedIn Login",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Navigate to LinkedIn Login": {
+            "main": [
+                [
+                    {
+                        "node": "Fill Username",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Fill Password",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Fill Username": {
+            "main": [
+                [
+                    {
+                        "node": "Click Login",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Fill Password": {
+            "main": [
+                [
+                    {
+                        "node": "Click Login",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Click Login": {
+            "main": [
+                [
+                    {
+                        "node": "Navigate to Profile",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Navigate to Profile": {
+            "main": [
+                [
+                    {
+                        "node": "Click Edit Profile",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Click Edit Profile": {
+            "main": [
+                [
+                    {
+                        "node": "Update Profile Fields",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Update Profile Fields": {
+            "main": [
+                [
+                    {
+                        "node": "Save Profile",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Save Profile": {
+            "main": [
+                [
+                    {
+                        "node": "Navigate to Experience",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Navigate to Experience": {
+            "main": [
+                [
+                    {
+                        "node": "Update Experience",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Update Experience": {
+            "main": [
+                [
+                    {
+                        "node": "Navigate to Skills",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Navigate to Skills": {
+            "main": [
+                [
+                    {
+                        "node": "Update Skills",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Update Skills": {
+            "main": [
+                [
+                    {
+                        "node": "Navigate to Resume Upload",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Navigate to Resume Upload": {
+            "main": [
+                [
+                    {
+                        "node": "Upload Resume PDF",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Upload Resume PDF": {
+            "main": [
+                [
+                    {
+                        "node": "Prepare Success Response",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Prepare Success Response": {
+            "main": [
+                [
+                    {
+                        "node": "Send Success Response",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Send Success Response": {
+            "main": [
+                [
+                    {
+                        "node": "Webhook Response",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "pinData": {},
+    "settings": {
+        "executionOrder": "v1"
+    },
+    "staticData": null,
+    "tags": [],
+    "triggerCount": 0,
+    "updatedAt": "2025-09-02T12:00:00.000Z",
+    "versionId": "1"
+}

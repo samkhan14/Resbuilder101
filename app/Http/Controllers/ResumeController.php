@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Resume;
 use App\Models\Template;
+use App\Services\PlatformAutomationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -11,6 +12,12 @@ use Inertia\Response;
 
 class ResumeController extends Controller
 {
+    protected $automationService;
+
+    public function __construct(PlatformAutomationService $automationService)
+    {
+        $this->automationService = $automationService;
+    }
     public function index(Request $request): Response
     {
         $user = $request->user();
@@ -35,6 +42,7 @@ class ResumeController extends Controller
             ->where('is_active', true)
             ->orderBy('display_order')
             ->get();
+
 
         return Inertia::render('ResumeEditor', [
             'resume' => null,
@@ -258,35 +266,31 @@ class ResumeController extends Controller
         ]);
 
         $platform = $request->platform;
+        $user = $request->user();
 
         try {
-            // Simulate sync process (this will be replaced with actual n8n webhook)
-            $syncResults = [
-                'linkedin' => ['status' => 'success', 'message' => 'Resume synced to LinkedIn successfully'],
-                'naukri' => ['status' => 'success', 'message' => 'Resume synced to Naukri.com successfully'],
-                'gulftalent' => ['status' => 'success', 'message' => 'Resume synced to GulfTalent successfully'],
-                'indeed' => ['status' => 'success', 'message' => 'Resume synced to Indeed successfully']
-            ];
+            // Use the automation service to sync to platform
+            $result = $this->automationService->syncToPlatform($resume, $user, $platform);
 
-            $result = $syncResults[$platform] ?? ['status' => 'error', 'message' => 'Platform not supported'];
-
-            // Update resume sync status
-            $resume->update([
-                'last_synced_at' => now(),
-                'sync_status' => [
-                    'last_sync' => now()->toISOString(),
-                    'platform' => $platform,
-                    'status' => $result['status']
-                ]
-            ]);
+            // Update resume sync status if successful
+            if ($result['success']) {
+                $resume->update([
+                    'last_synced_at' => now(),
+                    'sync_status' => [
+                        'last_sync' => now()->toISOString(),
+                        'platform' => $platform,
+                        'status' => $result['status'] ?? 'processing'
+                    ]
+                ]);
+            }
 
             return response()->json([
-                'success' => true,
+                'success' => $result['success'],
                 'message' => $result['message'],
                 'platform' => $platform,
-                'resume_id' => $resume->id
+                'resume_id' => $resume->id,
+                'action_required' => $result['action_required'] ?? null
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,

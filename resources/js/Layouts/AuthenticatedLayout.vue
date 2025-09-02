@@ -159,6 +159,18 @@ const showingNavigationDropdown = ref(false);
                             Create Resume
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
+                            :href="route('credentials.index')"
+                            :active="route().current('credentials.*')"
+                        >
+                            Manage Credentials
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            :href="route('logs.index')"
+                            :active="route().current('logs.*')"
+                        >
+                            Logs
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
                             v-if="$page.props.auth.user.is_admin"
                             :href="route('admin.dashboard')"
                             :active="route().current('admin.*')"
@@ -196,8 +208,6 @@ const showingNavigationDropdown = ref(false);
                         </div>
                     </div>
                 </div>
-            </nav>
-
             </nav>
 
             <div class="flex">
@@ -253,6 +263,38 @@ const showingNavigationDropdown = ref(false);
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                                     </svg>
                                     Create Resume
+                                </Link>
+
+                                <!-- Manage Credentials -->
+                                <Link
+                                    :href="route('credentials.index')"
+                                    :class="[
+                                        route().current('credentials.*')
+                                            ? 'bg-gray-100 text-gray-900'
+                                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
+                                        'group flex items-center px-2 py-2 text-sm font-medium rounded-md'
+                                    ]"
+                                >
+                                    <svg class="mr-3 h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v-2.25H4.5v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
+                                    </svg>
+                                    Manage Credentials
+                                </Link>
+
+                                <!-- Logs -->
+                                <Link
+                                    :href="route('logs.index')"
+                                    :class="[
+                                        route().current('logs.*')
+                                            ? 'bg-gray-100 text-gray-900'
+                                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
+                                        'group flex items-center px-2 py-2 text-sm font-medium rounded-md'
+                                    ]"
+                                >
+                                    <svg class="mr-3 h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                    Logs
                                 </Link>
 
                                 <!-- Admin Panel -->

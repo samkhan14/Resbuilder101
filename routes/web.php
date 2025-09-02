@@ -2,10 +2,13 @@
 
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\LogsController;
 use App\Http\Controllers\PdfController;
+use App\Http\Controllers\PlatformCredentialController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ResumeController;
 use App\Http\Controllers\TemplateController;
+use App\Http\Controllers\WebhookController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -58,6 +61,22 @@ Route::middleware('auth')->group(function () {
     Route::get('/templates', [TemplateController::class, 'index'])->name('templates.index');
     Route::get('/templates/{template}', [TemplateController::class, 'show'])->name('templates.show');
 
+    // Platform credentials management
+    Route::prefix('credentials')->name('credentials.')->group(function () {
+        Route::get('/', [PlatformCredentialController::class, 'index'])->name('index');
+        Route::post('/', [PlatformCredentialController::class, 'store'])->name('store');
+        Route::put('/{credential}', [PlatformCredentialController::class, 'update'])->name('update');
+        Route::delete('/{credential}', [PlatformCredentialController::class, 'destroy'])->name('destroy');
+        Route::post('/{credential}/toggle', [PlatformCredentialController::class, 'toggle'])->name('toggle');
+    });
+
+    // Logs management
+    Route::prefix('logs')->name('logs.')->group(function () {
+        Route::get('/', [LogsController::class, 'index'])->name('index');
+        Route::get('/activity', [LogsController::class, 'activity'])->name('activity');
+        Route::get('/sync', [LogsController::class, 'sync'])->name('sync');
+    });
+
     // Admin routes
     Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/', [AdminController::class, 'index'])->name('dashboard');
@@ -65,6 +84,12 @@ Route::middleware('auth')->group(function () {
         Route::get('/categories', [AdminController::class, 'categories'])->name('categories');
         Route::get('/users', [AdminController::class, 'users'])->name('users');
     });
+});
+
+// Webhook routes (no auth required)
+Route::prefix('webhooks')->name('webhooks.')->group(function () {
+    Route::post('/n8n/response', [WebhookController::class, 'handleN8nResponse'])->name('n8n.response');
+    Route::post('/n8n/manual-sync', [WebhookController::class, 'handleManualSyncRequired'])->name('n8n.manual-sync');
 });
 
 require __DIR__ . '/auth.php';

@@ -1,12 +1,28 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 
-defineProps({
+const props = defineProps({
     categories: Array,
     userResumes: Array,
     stats: Object,
 });
+
+const selectTemplate = (template) => {
+    router.visit(route('resumes.create', { template: template.id }));
+};
+
+const duplicateResume = (resumeId) => {
+    router.post(route('resumes.duplicate', resumeId));
+};
+
+const formatDate = (date) => {
+    return new Date(date).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+    });
+};
 </script>
 
 <template>
@@ -34,25 +50,25 @@ defineProps({
                     <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                         <div class="p-6">
                             <div class="text-sm font-medium text-gray-500">Total Resumes</div>
-                            <div class="text-3xl font-bold text-blue-600">{{ stats.totalResumes }}</div>
+                            <div class="text-3xl font-bold text-blue-600">{{ props.stats.totalResumes }}</div>
                         </div>
                     </div>
                     <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                         <div class="p-6">
                             <div class="text-sm font-medium text-gray-500">Published</div>
-                            <div class="text-3xl font-bold text-green-600">{{ stats.publishedResumes }}</div>
+                            <div class="text-3xl font-bold text-green-600">{{ props.stats.publishedResumes }}</div>
                         </div>
                     </div>
                     <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                         <div class="p-6">
                             <div class="text-sm font-medium text-gray-500">Drafts</div>
-                            <div class="text-3xl font-bold text-yellow-600">{{ stats.draftResumes }}</div>
+                            <div class="text-3xl font-bold text-yellow-600">{{ props.stats.draftResumes }}</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- User Resumes Section -->
-                <div v-if="userResumes.length > 0" class="mb-12">
+                <div v-if="props.userResumes.length > 0" class="mb-12">
                     <div class="flex items-center justify-between mb-6">
                         <h3 class="text-2xl font-bold text-gray-900">Your Resumes</h3>
                         <Link
@@ -64,7 +80,7 @@ defineProps({
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         <div
-                            v-for="resume in userResumes.slice(0, 6)"
+                            v-for="resume in props.userResumes.slice(0, 6)"
                             :key="resume.id"
                             class="bg-white rounded-lg shadow-sm border p-6 hover:shadow-md transition-shadow"
                         >
@@ -108,7 +124,7 @@ defineProps({
                     <h3 class="text-2xl font-bold text-gray-900 mb-6">Choose a Template</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                         <div
-                            v-for="category in categories"
+                            v-for="category in props.categories"
                             :key="category.id"
                             class="bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-lg transition-shadow"
                         >
@@ -168,27 +184,3 @@ defineProps({
         </div>
     </AuthenticatedLayout>
 </template>
-
-<script>
-import { router } from '@inertiajs/vue3'
-
-export default {
-    methods: {
-        selectTemplate(template) {
-            router.visit(route('resumes.create', { template: template.id }))
-        },
-
-        duplicateResume(resumeId) {
-            router.post(route('resumes.duplicate', resumeId))
-        },
-
-        formatDate(date) {
-            return new Date(date).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric'
-            })
-        }
-    }
-}
-</script>
